@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login & Dashboard kontrol sanyo iot</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+</head>
+<body>
+  <!-- Halaman Register -->
+  <div class="container" id="registerPage">
+    <h2>Register</h2>
+    <input type="text" id="regName" placeholder="Nama" />
+    <input type="email" id="regEmail" placeholder="Email" />
+    <input type="password" id="regPassword" placeholder="Password" />
+    <button id="registerBtn">Daftar</button>
+    <div class="link" id="toLogin">Sudah punya akun? Login</div>
+  </div>
+
+  <!-- Halaman Login -->
+  <div class="container" id="loginPage" style="display:none;">
+    <h2>Login</h2>
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <div class="link" id="toRegister">Belum punya akun? Register</div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="container" id="dashboard" style="display:none;">
+    <h2>Dashboard kontrol iot</h2>
+
+    <!-- Tombol Relay -->
+    <button id="relayBtn">Loading...</button>
+    <div id="status">Status: --</div>
+
+    <!-- Tombol Lock (Hanya muncul untuk admin) -->
+    <button id="lockBtn" style="display:none; background-color: #ff5555; margin-top: 10px;">Lock Relay</button>
+
+    <button id="logoutBtn" style="margin-top: 15px;">Logout</button>
+  </div>
+
+  <!-- File JS -->
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* Container utama */
+.container {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  padding: 40px 30px;
+  border-radius: 15px;
+  width: 350px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.container:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+}
+
+/* Judul */
+.container h2 {
+  margin-bottom: 25px;
+  font-size: 28px;
+  color: #fff;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* Input */
+input {
+  width: 100%;
+  padding: 12px 15px;
+  margin: 10px 0;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  background-color: rgba(255,255,255,0.1);
+  color: #fff;
+  transition: background-color 0.3s ease;
+}
+
+input::placeholder {
+  color: #ccc;
+}
+
+input:focus {
+  background-color: rgba(255,255,255,0.2);
+}
+
+/* Tombol biru */
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  background: linear-gradient(90deg, #1E90FF, #007BFF);
+  color: #fff;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
+
+button:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(90deg, #007BFF, #0056b3);
+}
+
+/* Link */
+.link {
+  text-align: center;
+  margin-top: 15px;
+  cursor: pointer;
+  color: #ffb86c;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.link:hover {
+  color: #ff79c6;
+}
+
+/* Dashboard khusus */
+#dashboard button {
+  width: 180px;
+  margin: 10px auto;
+  display: block;
+}
+
+#statusRelay,
+#history {
+  margin-top: 15px;
+  font-weight: bold;
+  font-size: 16px;
+  color: #fff;
+}
