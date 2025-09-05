@@ -22,6 +22,7 @@ const toLogin = document.getElementById('toLogin');
 const toRegister = document.getElementById('toRegister');
 const relayBtn = document.getElementById('relayBtn');
 const lockBtn = document.getElementById('lockBtn');
+const lockIndicator = document.getElementById('lockIndicator'); // indikator lock
 
 // ====== Event Toggle Halaman ======
 toLogin.addEventListener('click', togglePage);
@@ -163,9 +164,18 @@ function updateRelayUI(status) {
 
 // ====== Update UI Lock ======
 function updateLockUI(lockStatus) {
+  if (lockStatus === 'on') {
+    lockIndicator.textContent = 'Lock: ON (Relay terkunci oleh Admin)';
+    lockIndicator.style.color = 'red';
+  } else {
+    lockIndicator.textContent = 'Lock: OFF (Relay bisa digunakan)';
+    lockIndicator.style.color = 'green';
+  }
+
   if (currentUserRole !== 'admin') {
     relayBtn.disabled = lockStatus === 'on';
   }
+
   lockBtn.textContent = lockStatus === 'on' ? 'Unlock Relay' : 'Lock Relay';
 }
 
