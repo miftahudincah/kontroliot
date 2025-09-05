@@ -8,7 +8,7 @@ const db = firebase.database();
 // ====== State ======
 let currentUserKey = localStorage.getItem('currentUserKey');
 let currentUserRole = localStorage.getItem('currentUserRole');
-let currentUserName = ''; // simpan nama user untuk history
+let currentUserName = '';
 
 // ====== Element ======
 const registerPage = document.getElementById('registerPage');
@@ -22,9 +22,9 @@ const toLogin = document.getElementById('toLogin');
 const toRegister = document.getElementById('toRegister');
 const relayBtn = document.getElementById('relayBtn');
 const lockBtn = document.getElementById('lockBtn');
-const lockIndicator = document.getElementById('lockIndicator'); // indikator lock
+const lockIndicator = document.getElementById('lockIndicator');
 
-// ====== Event Toggle Halaman ======
+// ====== Toggle Halaman ======
 toLogin.addEventListener('click', togglePage);
 toRegister.addEventListener('click', togglePage);
 
@@ -43,8 +43,7 @@ if (currentUserKey) {
       localStorage.setItem('currentUserRole', currentUserRole);
       showDashboard();
     } else {
-      localStorage.removeItem('currentUserKey');
-      localStorage.removeItem('currentUserRole');
+      localStorage.clear();
     }
   });
 }
@@ -69,7 +68,7 @@ registerBtn.addEventListener('click', () => {
         name,
         email,
         password,
-        role: 'user' // Role default
+        role: 'user'
       });
       alert('Registrasi berhasil!');
       togglePage();
@@ -107,7 +106,7 @@ loginBtn.addEventListener('click', () => {
   });
 });
 
-// ====== Tampilkan Dashboard ======
+// ====== Dashboard ======
 function showDashboard() {
   loginPage.style.display = 'none';
   registerPage.style.display = 'none';
@@ -123,11 +122,10 @@ function showDashboard() {
 
 // ====== Logout ======
 logoutBtn.addEventListener('click', () => {
+  localStorage.clear();
   currentUserKey = null;
   currentUserRole = null;
   currentUserName = '';
-  localStorage.removeItem('currentUserKey');
-  localStorage.removeItem('currentUserRole');
   dashboard.style.display = 'none';
   loginPage.style.display = 'block';
 });
@@ -138,31 +136,24 @@ function initRelay() {
   const lockRef = db.ref('relay/lock');
   const historyRef = db.ref('relay/history');
 
-  // Listen status relay
   relayRef.on('value', snap => {
-    const status = snap.val() || 'off';
-    updateRelayUI(status);
+    updateRelayUI(snap.val() || 'off');
   });
 
-  // Listen status lock
   lockRef.on('value', snap => {
-    const lockStatus = snap.val() || 'off';
-    updateLockUI(lockStatus);
+    updateLockUI(snap.val() || 'off');
   });
 
-  // Listen history terakhir
   historyRef.on('value', snap => {
-    const lastUser = snap.val() || 'Tidak ada';
-    document.getElementById('status').textContent = `Status terakhir: ${lastUser}`;
+    document.getElementById('status').textContent = `Status terakhir: ${snap.val() || 'Tidak ada'}`;
   });
 }
 
-// ====== Update UI Relay ======
+// ====== Update UI ======
 function updateRelayUI(status) {
-  relayBtn.textContent = status === 'on' ? ' matikan pompa air ' : ' hidupkan pompa air';
+  relayBtn.textContent = status === 'on' ? 'Matikan Pompa Air' : 'Hidupkan Pompa Air';
 }
 
-// ====== Update UI Lock ======
 function updateLockUI(lockStatus) {
   if (lockStatus === 'on') {
     lockIndicator.textContent = 'Lock: ON (Relay terkunci oleh Admin)';
@@ -186,9 +177,8 @@ relayBtn.addEventListener('click', () => {
     if (snap.val() === 'on' && currentUserRole !== 'admin') {
       alert('Relay terkunci oleh admin!');
       return;
-    } else {
-      toggleRelayStatus();
     }
+    toggleRelayStatus();
   });
 });
 
@@ -196,20 +186,46 @@ function toggleRelayStatus() {
   const relayRef = db.ref('relay/status');
   const historyRef = db.ref('relay/history');
   relayRef.once('value', snap => {
-    const status = snap.val() || 'off';
-    const newStatus = status === 'on' ? 'off' : 'on';
+    const newStatus = (snap.val() || 'off') === 'on' ? 'off' : 'on';
     relayRef.set(newStatus);
     historyRef.set(`${currentUserName} menekan ${newStatus.toUpperCase()}`);
   });
 }
 
-// ====== Toggle Lock (Admin Only) ======
+// ====== Toggle Lock dengan Kunci ======
 lockBtn.addEventListener('click', () => {
   if (currentUserRole !== 'admin') return;
   const lockRef = db.ref('relay/lock');
+  const keyRef = db.ref('relay/lockKey');
+  const historyRef = db.ref('relay/history');
+
   lockRef.once('value', snap => {
     const lockStatus = snap.val() || 'off';
-    const newLockStatus = lockStatus === 'on' ? 'off' : 'on';
-    lockRef.set(newLockStatus);
+
+    if (lockStatus === 'off') {
+      // ==== PROSES LOCK ====
+      const kunci = prompt("Masukkan teks kunci untuk LOCK:");
+      if (!kunci) {
+        alert("Lock dibatalkan karena kunci kosong!");
+        return;
+      }
+      lockRef.set('on');
+      keyRef.set(kunci);
+      historyRef.set(`${currentUserName} mengunci relay dengan kunci`);
+    } else {
+      // ==== PROSES UNLOCK ====
+      keyRef.once('value', snapKey => {
+        const savedKey = snapKey.val();
+        const inputKey = prompt("Masukkan teks kunci untuk UNLOCK:");
+
+        if (inputKey === savedKey) {
+          lockRef.set('off');
+          keyRef.remove();
+          historyRef.set(`${currentUserName} membuka kunci relay`);
+        } else {
+          alert("Kunci salah! Tidak bisa Unlock.");
+        }
+      });
+    }
   });
 });
