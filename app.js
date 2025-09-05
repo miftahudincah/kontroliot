@@ -159,7 +159,7 @@ function initRelay() {
 
 // ====== Update UI Relay ======
 function updateRelayUI(status) {
-  relayBtn.textContent = status === 'on' ? 'Matikan Relay' : 'Nyalakan Relay';
+  relayBtn.textContent = status === 'on' ? ' matikan pompa air ' : ' hidupkan pompa air';
 }
 
 // ====== Update UI Lock ======
