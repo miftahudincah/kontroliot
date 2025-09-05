@@ -23,6 +23,7 @@ const toRegister = document.getElementById('toRegister');
 const relayBtn = document.getElementById('relayBtn');
 const lockBtn = document.getElementById('lockBtn');
 const lockIndicator = document.getElementById('lockIndicator');
+const voiceBtn = document.getElementById('voiceBtn'); // tombol voice
 
 // ====== Toggle Halaman ======
 toLogin.addEventListener('click', togglePage);
@@ -182,11 +183,16 @@ relayBtn.addEventListener('click', () => {
   });
 });
 
-function toggleRelayStatus() {
+function toggleRelayStatus(forceStatus = null) {
   const relayRef = db.ref('relay/status');
   const historyRef = db.ref('relay/history');
   relayRef.once('value', snap => {
-    const newStatus = (snap.val() || 'off') === 'on' ? 'off' : 'on';
+    let newStatus;
+    if (forceStatus) {
+      newStatus = forceStatus;
+    } else {
+      newStatus = (snap.val() || 'off') === 'on' ? 'off' : 'on';
+    }
     relayRef.set(newStatus);
     historyRef.set(`${currentUserName} menekan ${newStatus.toUpperCase()}`);
   });
@@ -229,3 +235,38 @@ lockBtn.addEventListener('click', () => {
     }
   });
 });
+
+// ====== Voice Command (Hanya "nyalakan" & "matikan") ======
+if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = 'id-ID';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  voiceBtn.addEventListener('click', () => {
+    recognition.start();
+    voiceBtn.textContent = "🎙️ Mendengarkan...";
+  });
+
+  recognition.onresult = (event) => {
+    const command = event.results[0][0].transcript.toLowerCase();
+    console.log("Perintah suara:", command);
+    voiceBtn.textContent = "🎤 Voice";
+
+    if (command.includes("nyalakan")) {
+      toggleRelayStatus("on");
+    } else if (command.includes("matikan")) {
+      toggleRelayStatus("off");
+    } else {
+      alert("Perintah tidak dikenali! Gunakan 'nyalakan' atau 'matikan'.");
+    }
+  };
+
+  recognition.onerror = () => {
+    voiceBtn.textContent = "🎤 Voice";
+  };
+} else if (voiceBtn) {
+  voiceBtn.style.display = "none"; // sembunyikan kalau tidak support
+}
