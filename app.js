@@ -14,6 +14,7 @@ let currentUserName = '';
 const registerPage = document.getElementById('registerPage');
 const loginPage = document.getElementById('loginPage');
 const dashboard = document.getElementById('dashboard');
+const chatPage = document.getElementById('chatPage');
 
 const registerBtn = document.getElementById('registerBtn');
 const loginBtn = document.getElementById('loginBtn');
@@ -24,8 +25,13 @@ const relayBtn = document.getElementById('relayBtn');
 const lockBtn = document.getElementById('lockBtn');
 const lockIndicator = document.getElementById('lockIndicator');
 const voiceBtn = document.getElementById('voiceBtn');
+const chatPageBtn = document.getElementById('chatPageBtn');
+const backToDashboard = document.getElementById('backToDashboard');
+const sendChatBtn = document.getElementById('sendChatBtn');
+const chatInput = document.getElementById('chatInput');
+const chatBox = document.getElementById('chatBox');
 
-// ====== Toggle Halaman ======
+// ====== Toggle Halaman Login/Register ======
 toLogin.addEventListener('click', togglePage);
 toRegister.addEventListener('click', togglePage);
 
@@ -112,6 +118,7 @@ function showDashboard() {
   loginPage.style.display = 'none';
   registerPage.style.display = 'none';
   dashboard.style.display = 'block';
+  chatPage.style.display = 'none';
   initRelay();
 
   if (currentUserRole === 'admin') {
@@ -128,6 +135,7 @@ logoutBtn.addEventListener('click', () => {
   currentUserRole = null;
   currentUserName = '';
   dashboard.style.display = 'none';
+  chatPage.style.display = 'none';
   loginPage.style.display = 'block';
 });
 
@@ -150,7 +158,7 @@ function initRelay() {
   });
 }
 
-// ====== Update UI ======
+// ====== Update UI Relay & Lock ======
 function updateRelayUI(status) {
   relayBtn.textContent = status === 'on' ? 'Matikan Pompa Air' : 'Hidupkan Pompa Air';
 }
@@ -209,7 +217,6 @@ lockBtn.addEventListener('click', () => {
     const lockStatus = snap.val() || 'off';
 
     if (lockStatus === 'off') {
-      // ==== PROSES LOCK ====
       const kunci = prompt("Masukkan teks kunci untuk LOCK:");
       if (!kunci) {
         alert("Lock dibatalkan karena kunci kosong!");
@@ -219,7 +226,6 @@ lockBtn.addEventListener('click', () => {
       keyRef.set(kunci);
       historyRef.set(`${currentUserName} mengunci relay dengan kunci`);
     } else {
-      // ==== PROSES UNLOCK ====
       keyRef.once('value', snapKey => {
         const savedKey = snapKey.val();
         const inputKey = prompt("Masukkan teks kunci untuk UNLOCK:");
@@ -252,24 +258,111 @@ if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in w
 
   recognition.onresult = (event) => {
     const command = event.results[0][0].transcript.toLowerCase();
-    console.log("Perintah suara:", command);
-    voiceBtn.textContent = "🎤 Voice";
+    voiceBtn.textContent = "🎤 Voice Command";
 
-    if (command.includes("nyalakan")) {
-      toggleRelayStatus("on");
-    } else if (command.includes("matikan")) {
-      toggleRelayStatus("off");
-    } else {
-      alert("Perintah tidak dikenali! Gunakan 'nyalakan' atau 'matikan'.");
-    }
+    if (command.includes("nyalakan")) toggleRelayStatus("on");
+    else if (command.includes("matikan")) toggleRelayStatus("off");
+    else alert("Perintah tidak dikenali! Gunakan 'nyalakan' atau 'matikan'.");
   };
 
   recognition.onerror = () => {
-    voiceBtn.textContent = "🎤 Voice";
+    voiceBtn.textContent = "🎤 Voice Command";
     alert("Terjadi error saat mendengarkan suara.");
   };
 } else if (voiceBtn) {
   voiceBtn.addEventListener('click', () => {
     alert("Voice command tidak tersedia di browser Android. Gunakan Chrome di PC.");
+  });
+}
+
+// ====== CHAT FEATURE ======
+
+// tombol Hapus Semua Chat untuk admin
+let deleteAllBtn = document.createElement('button');
+deleteAllBtn.textContent = 'Hapus Semua Chat';
+deleteAllBtn.style.background = '#ff4b2b';
+deleteAllBtn.style.color = '#fff';
+deleteAllBtn.style.border = 'none';
+deleteAllBtn.style.padding = '8px 12px';
+deleteAllBtn.style.borderRadius = '6px';
+deleteAllBtn.style.cursor = 'pointer';
+deleteAllBtn.style.marginTop = '8px';
+chatPage.appendChild(deleteAllBtn);
+
+deleteAllBtn.addEventListener('click', () => {
+  if (currentUserRole !== 'admin') return;
+  if (confirm('Apakah Anda yakin ingin menghapus semua chat?')) {
+    db.ref('chat').remove();
+  }
+});
+
+// buka chat
+chatPageBtn.addEventListener('click', () => {
+  dashboard.style.display = 'none';
+  chatPage.style.display = 'block';
+  loadChats();
+});
+
+// kembali ke dashboard
+backToDashboard.addEventListener('click', () => {
+  chatPage.style.display = 'none';
+  dashboard.style.display = 'block';
+});
+
+// kirim pesan dengan jam
+sendChatBtn.addEventListener('click', () => {
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  const now = new Date();
+  const timestamp = now.toLocaleTimeString(); // HH:MM:SS
+  const chatId = db.ref('chat').push().key;
+
+  db.ref('chat/' + chatId).set({
+    userKey: currentUserKey,
+    userName: currentUserName,
+    text,
+    time: timestamp
+  });
+
+  chatInput.value = '';
+});
+
+// tampilkan chat realtime dengan jam dan tombol Hapus per chat
+function loadChats() {
+  db.ref('chat').off();
+  db.ref('chat').on('value', snapshot => {
+    chatBox.innerHTML = '';
+
+    snapshot.forEach(child => {
+      const chat = child.val();
+      const div = document.createElement('div');
+      div.classList.add('chatMsg');
+      div.innerHTML = `
+        <div class="chatHeader">
+          ${chat.userName} 
+          <span style="font-size:12px; color:#aaa;">${chat.time || ''}</span>
+        </div>
+        <div class="chatText">${chat.text}</div>
+      `;
+
+      // Hapus per chat jika pemilik
+      if (chat.userKey === currentUserKey) {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Hapus';
+        delBtn.classList.add('deleteBtn');
+        delBtn.addEventListener('click', () => {
+          db.ref('chat/' + child.key).remove();
+        });
+        div.appendChild(delBtn);
+      }
+
+      chatBox.appendChild(div);
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // tampilkan tombol Hapus Semua hanya untuk admin
+    deleteAllBtn.style.display = currentUserRole === 'admin' ? 'block' : 'none';
   });
 }
