@@ -23,7 +23,7 @@ const toRegister = document.getElementById('toRegister');
 const relayBtn = document.getElementById('relayBtn');
 const lockBtn = document.getElementById('lockBtn');
 const lockIndicator = document.getElementById('lockIndicator');
-const voiceBtn = document.getElementById('voiceBtn'); // tombol voice
+const voiceBtn = document.getElementById('voiceBtn');
 
 // ====== Toggle Halaman ======
 toLogin.addEventListener('click', togglePage);
@@ -146,7 +146,7 @@ function initRelay() {
   });
 
   historyRef.on('value', snap => {
-    document.getElementById('status').textContent = `Status terakhir: ${snap.val() || 'Tidak ada'}`;
+    document.getElementById('status').textContent = `Status: ${snap.val() || '--'}`;
   });
 }
 
@@ -236,7 +236,7 @@ lockBtn.addEventListener('click', () => {
   });
 });
 
-// ====== Voice Command (Hanya "nyalakan" & "matikan") ======
+// ====== Voice Command ======
 if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = new SpeechRecognition();
@@ -266,8 +266,10 @@ if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in w
 
   recognition.onerror = () => {
     voiceBtn.textContent = "🎤 Voice";
+    alert("Terjadi error saat mendengarkan suara.");
   };
 } else if (voiceBtn) {
-  voiceBtn.style.display = "none"; // sembunyikan kalau tidak support
+  voiceBtn.addEventListener('click', () => {
+    alert("Voice command tidak tersedia di browser Android. Gunakan Chrome di PC.");
+  });
 }
-
