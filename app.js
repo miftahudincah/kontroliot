@@ -270,3 +270,4 @@ if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in w
 } else if (voiceBtn) {
   voiceBtn.style.display = "none"; // sembunyikan kalau tidak support
 }
+
