@@ -66,6 +66,16 @@
       padding: 10px;
       background: #2a2a3d;
     }
+    #userList {
+      max-height: 120px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 5px;
+      background: #2a2a3d;
+      text-align: left;
+    }
     .chatMsg {
       padding: 6px;
       margin: 5px 0;
@@ -122,7 +132,6 @@
   <!-- Dashboard -->
   <div class="container" id="dashboard" style="display:none;">
     <h2>Dashboard Kontrol IoT</h2>
-
     <button id="relayBtn">🔄 Loading...</button>
     <div id="status">Status: --</div>
 
@@ -139,6 +148,7 @@
   <!-- Halaman Chat -->
   <div class="container" id="chatPage" style="display:none;">
     <h2>Chat Room</h2>
+    <div id="userList"></div>
     <div id="chatBox"></div>
     <input type="text" id="chatInput" placeholder="Tulis pesan..." />
     <button id="sendChatBtn">Kirim</button>
@@ -146,6 +156,7 @@
   </div>
 
   <!-- File JS -->
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
+  <script type="module" src="chat.js"></script>
 </body>
 </html>
