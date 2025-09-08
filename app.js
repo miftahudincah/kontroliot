@@ -14,7 +14,7 @@ let currentUserName = '';
 const registerPage = document.getElementById('registerPage');
 const loginPage = document.getElementById('loginPage');
 const dashboard = document.getElementById('dashboard');
-const chatPage = document.getElementById('chatPage');
+const chatPageBtn = document.getElementById('chatPageBtn');
 
 const registerBtn = document.getElementById('registerBtn');
 const loginBtn = document.getElementById('loginBtn');
@@ -25,11 +25,6 @@ const relayBtn = document.getElementById('relayBtn');
 const lockBtn = document.getElementById('lockBtn');
 const lockIndicator = document.getElementById('lockIndicator');
 const voiceBtn = document.getElementById('voiceBtn');
-const chatPageBtn = document.getElementById('chatPageBtn');
-const backToDashboard = document.getElementById('backToDashboard');
-const sendChatBtn = document.getElementById('sendChatBtn');
-const chatInput = document.getElementById('chatInput');
-const chatBox = document.getElementById('chatBox');
 
 // ====== Toggle Halaman Login/Register ======
 toLogin.addEventListener('click', togglePage);
@@ -275,94 +270,12 @@ if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in w
   });
 }
 
-// ====== CHAT FEATURE ======
-
-// tombol Hapus Semua Chat untuk admin
-let deleteAllBtn = document.createElement('button');
-deleteAllBtn.textContent = 'Hapus Semua Chat';
-deleteAllBtn.style.background = '#ff4b2b';
-deleteAllBtn.style.color = '#fff';
-deleteAllBtn.style.border = 'none';
-deleteAllBtn.style.padding = '8px 12px';
-deleteAllBtn.style.borderRadius = '6px';
-deleteAllBtn.style.cursor = 'pointer';
-deleteAllBtn.style.marginTop = '8px';
-chatPage.appendChild(deleteAllBtn);
-
-deleteAllBtn.addEventListener('click', () => {
-  if (currentUserRole !== 'admin') return;
-  if (confirm('Apakah Anda yakin ingin menghapus semua chat?')) {
-    db.ref('chat').remove();
-  }
-});
-
-// buka chat
-chatPageBtn.addEventListener('click', () => {
-  dashboard.style.display = 'none';
-  chatPage.style.display = 'block';
-  loadChats();
-});
-
-// kembali ke dashboard
-backToDashboard.addEventListener('click', () => {
-  chatPage.style.display = 'none';
-  dashboard.style.display = 'block';
-});
-
-// kirim pesan dengan jam
-sendChatBtn.addEventListener('click', () => {
-  const text = chatInput.value.trim();
-  if (!text) return;
-
-  const now = new Date();
-  const timestamp = now.toLocaleTimeString(); // HH:MM:SS
-  const chatId = db.ref('chat').push().key;
-
-  db.ref('chat/' + chatId).set({
-    userKey: currentUserKey,
-    userName: currentUserName,
-    text,
-    time: timestamp
-  });
-
-  chatInput.value = '';
-});
-
-// tampilkan chat realtime dengan jam dan tombol Hapus per chat
-function loadChats() {
-  db.ref('chat').off();
-  db.ref('chat').on('value', snapshot => {
-    chatBox.innerHTML = '';
-
-    snapshot.forEach(child => {
-      const chat = child.val();
-      const div = document.createElement('div');
-      div.classList.add('chatMsg');
-      div.innerHTML = `
-        <div class="chatHeader">
-          ${chat.userName} 
-          <span style="font-size:12px; color:#aaa;">${chat.time || ''}</span>
-        </div>
-        <div class="chatText">${chat.text}</div>
-      `;
-
-      // Hapus per chat jika pemilik
-      if (chat.userKey === currentUserKey) {
-        const delBtn = document.createElement('button');
-        delBtn.textContent = 'Hapus';
-        delBtn.classList.add('deleteBtn');
-        delBtn.addEventListener('click', () => {
-          db.ref('chat/' + child.key).remove();
-        });
-        div.appendChild(delBtn);
-      }
-
-      chatBox.appendChild(div);
-    });
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // tampilkan tombol Hapus Semua hanya untuk admin
-    deleteAllBtn.style.display = currentUserRole === 'admin' ? 'block' : 'none';
-  });
-}
+// ====== EXPORT untuk chat.js ======
+export {
+  db,
+  currentUserKey,
+  currentUserRole,
+  currentUserName,
+  dashboard,
+  chatPageBtn
+};
