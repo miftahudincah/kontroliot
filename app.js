@@ -14,6 +14,7 @@ let currentUserName = '';
 const registerPage = document.getElementById('registerPage');
 const loginPage = document.getElementById('loginPage');
 const dashboard = document.getElementById('dashboard');
+const chatPage = document.getElementById('chatPage');
 const chatPageBtn = document.getElementById('chatPageBtn');
 
 const registerBtn = document.getElementById('registerBtn');
@@ -43,17 +44,36 @@ if (currentUserKey) {
       currentUserRole = data.role;
       currentUserName = data.name;
       localStorage.setItem('currentUserRole', currentUserRole);
-      showDashboard();
+
+      validateUserName(currentUserName, isValid => {
+        if (isValid) showDashboard();
+        else promptNameInput(); // tampilkan input name jika nama tidak valid
+      });
     } else {
       localStorage.clear();
+      showLogin();
     }
+  });
+} else {
+  showLogin();
+}
+
+// ====== Fungsi Validasi Nama (case-insensitive) ======
+function validateUserName(name, callback) {
+  const lowerName = name.toLowerCase();
+  db.ref('validNames').orderByKey().once('value', snapshot => {
+    let exists = false;
+    snapshot.forEach(child => {
+      if (child.key.toLowerCase() === lowerName) exists = true;
+    });
+    callback(exists);
   });
 }
 
 // ====== Register ======
 registerBtn.addEventListener('click', () => {
   const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim();
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
   const password = document.getElementById('regPassword').value.trim();
 
   if (!name || !email || !password) {
@@ -80,7 +100,7 @@ registerBtn.addEventListener('click', () => {
 
 // ====== Login ======
 loginBtn.addEventListener('click', () => {
-  const email = document.getElementById('loginEmail').value.trim();
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
   const password = document.getElementById('loginPassword').value.trim();
 
   if (!email || !password) {
@@ -98,7 +118,11 @@ loginBtn.addEventListener('click', () => {
       if (userData[currentUserKey].password === password) {
         localStorage.setItem('currentUserKey', currentUserKey);
         localStorage.setItem('currentUserRole', currentUserRole);
-        showDashboard();
+
+        validateUserName(currentUserName, isValid => {
+          if (isValid) showDashboard();
+          else promptNameInput();
+        });
       } else {
         alert('Password salah!');
       }
@@ -108,6 +132,34 @@ loginBtn.addEventListener('click', () => {
   });
 });
 
+// ====== Prompt Input Nama ======
+function promptNameInput() {
+  loginPage.innerHTML = `
+    <h3>Nama tidak valid! Masukkan nama Anda:</h3>
+    <input type="text" id="nameInput" placeholder="Nama Anda" />
+    <button id="confirmNameBtn">Konfirmasi Nama</button>
+  `;
+
+  const confirmBtn = document.getElementById('confirmNameBtn');
+  confirmBtn.addEventListener('click', () => {
+    const nameInput = document.getElementById('nameInput').value.trim();
+    if (!nameInput) {
+      alert('Nama harus diisi!');
+      return;
+    }
+
+    validateUserName(nameInput, isValid => {
+      if (isValid) {
+        currentUserName = nameInput;
+        db.ref('users/' + currentUserKey).update({ name: nameInput });
+        showDashboard();
+      } else {
+        alert('Nama tidak valid atau tidak terdaftar!');
+      }
+    });
+  });
+}
+
 // ====== Dashboard ======
 function showDashboard() {
   loginPage.style.display = 'none';
@@ -115,12 +167,15 @@ function showDashboard() {
   dashboard.style.display = 'block';
   chatPage.style.display = 'none';
   initRelay();
+  lockBtn.style.display = currentUserRole === 'admin' ? 'block' : 'none';
+}
 
-  if (currentUserRole === 'admin') {
-    lockBtn.style.display = 'block';
-  } else {
-    lockBtn.style.display = 'none';
-  }
+// ====== Tampilkan Login ======
+function showLogin() {
+  loginPage.style.display = 'block';
+  registerPage.style.display = 'none';
+  dashboard.style.display = 'none';
+  chatPage.style.display = 'none';
 }
 
 // ====== Logout ======
@@ -129,9 +184,7 @@ logoutBtn.addEventListener('click', () => {
   currentUserKey = null;
   currentUserRole = null;
   currentUserName = '';
-  dashboard.style.display = 'none';
-  chatPage.style.display = 'none';
-  loginPage.style.display = 'block';
+  showLogin();
 });
 
 // ====== Inisialisasi Relay ======
@@ -140,14 +193,8 @@ function initRelay() {
   const lockRef = db.ref('relay/lock');
   const historyRef = db.ref('relay/history');
 
-  relayRef.on('value', snap => {
-    updateRelayUI(snap.val() || 'off');
-  });
-
-  lockRef.on('value', snap => {
-    updateLockUI(snap.val() || 'off');
-  });
-
+  relayRef.on('value', snap => updateRelayUI(snap.val() || 'off'));
+  lockRef.on('value', snap => updateLockUI(snap.val() || 'off'));
   historyRef.on('value', snap => {
     document.getElementById('status').textContent = `Status: ${snap.val() || '--'}`;
   });
@@ -159,25 +206,17 @@ function updateRelayUI(status) {
 }
 
 function updateLockUI(lockStatus) {
-  if (lockStatus === 'on') {
-    lockIndicator.textContent = 'Lock: ON (Relay terkunci oleh Admin)';
-    lockIndicator.style.color = 'red';
-  } else {
-    lockIndicator.textContent = 'Lock: OFF (Relay bisa digunakan)';
-    lockIndicator.style.color = 'green';
-  }
-
-  if (currentUserRole !== 'admin') {
-    relayBtn.disabled = lockStatus === 'on';
-  }
-
+  lockIndicator.textContent = lockStatus === 'on' 
+    ? 'Lock: ON (Relay terkunci oleh Admin)' 
+    : 'Lock: OFF (Relay bisa digunakan)';
+  lockIndicator.style.color = lockStatus === 'on' ? 'red' : 'green';
+  if (currentUserRole !== 'admin') relayBtn.disabled = lockStatus === 'on';
   lockBtn.textContent = lockStatus === 'on' ? 'Unlock Relay' : 'Lock Relay';
 }
 
 // ====== Toggle Relay ======
 relayBtn.addEventListener('click', () => {
-  const lockRef = db.ref('relay/lock');
-  lockRef.once('value', snap => {
+  db.ref('relay/lock').once('value', snap => {
     if (snap.val() === 'on' && currentUserRole !== 'admin') {
       alert('Relay terkunci oleh admin!');
       return;
@@ -189,13 +228,9 @@ relayBtn.addEventListener('click', () => {
 function toggleRelayStatus(forceStatus = null) {
   const relayRef = db.ref('relay/status');
   const historyRef = db.ref('relay/history');
+
   relayRef.once('value', snap => {
-    let newStatus;
-    if (forceStatus) {
-      newStatus = forceStatus;
-    } else {
-      newStatus = (snap.val() || 'off') === 'on' ? 'off' : 'on';
-    }
+    const newStatus = forceStatus ? forceStatus : (snap.val() || 'off') === 'on' ? 'off' : 'on';
     relayRef.set(newStatus);
     historyRef.set(`${currentUserName} menekan ${newStatus.toUpperCase()}`);
   });
@@ -204,19 +239,16 @@ function toggleRelayStatus(forceStatus = null) {
 // ====== Toggle Lock dengan Kunci ======
 lockBtn.addEventListener('click', () => {
   if (currentUserRole !== 'admin') return;
+
   const lockRef = db.ref('relay/lock');
   const keyRef = db.ref('relay/lockKey');
   const historyRef = db.ref('relay/history');
 
   lockRef.once('value', snap => {
     const lockStatus = snap.val() || 'off';
-
     if (lockStatus === 'off') {
       const kunci = prompt("Masukkan teks kunci untuk LOCK:");
-      if (!kunci) {
-        alert("Lock dibatalkan karena kunci kosong!");
-        return;
-      }
+      if (!kunci) return alert("Lock dibatalkan karena kunci kosong!");
       lockRef.set('on');
       keyRef.set(kunci);
       historyRef.set(`${currentUserName} mengunci relay dengan kunci`);
@@ -224,14 +256,11 @@ lockBtn.addEventListener('click', () => {
       keyRef.once('value', snapKey => {
         const savedKey = snapKey.val();
         const inputKey = prompt("Masukkan teks kunci untuk UNLOCK:");
-
         if (inputKey === savedKey) {
           lockRef.set('off');
           keyRef.remove();
           historyRef.set(`${currentUserName} membuka kunci relay`);
-        } else {
-          alert("Kunci salah! Tidak bisa Unlock.");
-        }
+        } else alert("Kunci salah! Tidak bisa Unlock.");
       });
     }
   });
@@ -241,7 +270,6 @@ lockBtn.addEventListener('click', () => {
 if (voiceBtn && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = new SpeechRecognition();
-
   recognition.lang = 'id-ID';
   recognition.continuous = false;
   recognition.interimResults = false;
