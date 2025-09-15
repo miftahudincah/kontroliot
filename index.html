@@ -51,6 +51,7 @@
       color: white;
       font-size: 16px;
       cursor: pointer;
+      position: relative; /* penting untuk badge notifikasi */
     }
 
     .link { margin-top: 15px; font-size: 14px; color: #00f2fe; cursor: pointer; }
@@ -99,6 +100,19 @@
       font-size: 12px;
     }
 
+    /* Badge notifikasi */
+    #chatNotif {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 50%;
+      display: none;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-20px); }
       to { opacity: 1; transform: translateY(0); }
@@ -139,8 +153,8 @@
     <button id="lockBtn" style="display:none;">🔒 Lock Relay</button>
     <button id="voiceBtn">🎤 Voice Command</button>
 
-    <!-- Tombol ke Halaman Chat -->
-    <button id="chatPageBtn">💬 Buka Chat</button>
+    <!-- Tombol ke Halaman Chat + notifikasi -->
+    <button id="chatPageBtn">💬 Buka Chat <span id="chatNotif">0</span></button>
 
     <button id="logoutBtn">🚪 Logout</button>
   </div>
