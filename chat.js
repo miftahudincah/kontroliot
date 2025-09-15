@@ -20,8 +20,36 @@ notifBadge.style.marginLeft = '5px';
 notifBadge.style.display = 'none';
 chatPageBtn.appendChild(notifBadge);
 
-// ====== Audio Notifikasi ======
-const notifSound = new Audio('https://www.myinstants.com/media/sounds/bleep.mp3');
+// ====== Audio Notifikasi (mirip WA) ======
+const notifSound = new Audio('https://assets.mixkit.co/sfx/download/mixkit-software-interface-back-2575.mp3');
+
+// ====== Last Read Tracking ======
+function updateLastRead() {
+  db.ref(`users/${currentUserKey}/lastRead`).set(Date.now());
+}
+
+async function checkUnreadMessages() {
+  const lastReadSnap = await db.ref(`users/${currentUserKey}/lastRead`).once('value');
+  let lastReadTime = lastReadSnap.exists() ? lastReadSnap.val() : 0;
+
+  // cek global chat
+  db.ref('chat/global').once('value', snapshot => {
+    let unread = 0;
+    snapshot.forEach(msgSnap => {
+      const msg = msgSnap.val();
+      if (msg.userKey !== currentUserKey && msg.timestamp > lastReadTime) {
+        unread++;
+      }
+    });
+    if (unread > 0) {
+      notifSound.play();
+      notifCount += unread;
+      notifBadge.textContent = notifCount;
+      notifBadge.style.display = 'inline-block';
+      document.title = `💬 (${notifCount}) Pesan Belum Dibaca`;
+    }
+  });
+}
 
 // ====== Tombol Hapus Semua Chat untuk Admin ======
 let deleteAllBtn = document.createElement('button');
@@ -38,7 +66,8 @@ chatPage.appendChild(deleteAllBtn);
 deleteAllBtn.addEventListener('click', () => {
   if (currentUserRole !== 'admin') return;
   if (confirm('Apakah Anda yakin ingin menghapus semua chat?')) {
-    db.ref('chat').remove();
+    db.ref('chat/global').remove();
+    db.ref('chat/private').remove();
   }
 });
 
@@ -48,21 +77,25 @@ chatPageBtn.addEventListener('click', () => {
   chatPage.style.display = 'block';
   loadUsers();
   loadChats();
-  // Reset notif
+  // reset notif saat masuk chat
   notifCount = 0;
   notifBadge.style.display = 'none';
+  document.title = 'Dashboard IoT';
+  updateLastRead();
 });
 
 backToDashboard.addEventListener('click', () => {
   chatPage.style.display = 'none';
   dashboard.style.display = 'block';
+  notifCount = 0;
+  notifBadge.style.display = 'none';
+  document.title = 'Dashboard IoT';
 });
 
 // ====== Mode Chat ======
 let chatMode = 'global'; // default global
 let privateUserKey = null;
 
-// tombol toggle global/private
 const chatModeBtn = document.createElement('button');
 chatModeBtn.textContent = '🌐 Global Chat';
 chatModeBtn.style.marginTop = '10px';
@@ -91,8 +124,8 @@ sendChatBtn.addEventListener('click', () => {
   const text = chatInput.value.trim();
   if (!text) return;
 
-  const now = new Date();
-  const timestamp = now.toLocaleTimeString();
+  const timestamp = Date.now();
+  const timeStr = new Date(timestamp).toLocaleTimeString();
   const chatId = db.ref('chat').push().key;
 
   if (chatMode === 'global') {
@@ -100,7 +133,8 @@ sendChatBtn.addEventListener('click', () => {
       userKey: currentUserKey,
       userName: currentUserName,
       text,
-      time: timestamp
+      time: timeStr,
+      timestamp
     });
   } else if (chatMode === 'private') {
     const chatPath = [currentUserKey, privateUserKey].sort().join('_');
@@ -108,7 +142,8 @@ sendChatBtn.addEventListener('click', () => {
       senderKey: currentUserKey,
       senderName: currentUserName,
       text,
-      time: timestamp
+      time: timeStr,
+      timestamp
     });
   }
 
@@ -123,7 +158,6 @@ function loadChats() {
     db.ref('chat/global').off();
     db.ref('chat/global').on('child_added', snapshot => {
       appendChat(snapshot.key, snapshot.val(), 'global');
-      // Notifikasi jika chatPage tidak aktif dan bukan pesan sendiri
       if (chatPage.style.display === 'none' && snapshot.val().userKey !== currentUserKey) {
         notifSound.play();
         notifCount++;
@@ -148,7 +182,6 @@ function loadChats() {
     });
   }
 
-  // tampilkan tombol Hapus Semua hanya untuk admin
   deleteAllBtn.style.display = currentUserRole === 'admin' ? 'block' : 'none';
 }
 
@@ -164,7 +197,6 @@ function appendChat(key, chat, type) {
     <div class="chatText">${chat.text}</div>
   `;
 
-  // Hapus pesan milik sendiri
   if ((chat.userKey === currentUserKey) || (chat.senderKey === currentUserKey)) {
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Hapus';
@@ -178,13 +210,6 @@ function appendChat(key, chat, type) {
 
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
-
-  // Reset title saat user membuka chat
-  chatPage.addEventListener('mouseenter', () => {
-    document.title = 'Dashboard IoT';
-    notifCount = 0;
-    notifBadge.style.display = 'none';
-  });
 }
 
 // ====== Load List User ======
@@ -215,3 +240,6 @@ function loadUsers() {
     });
   });
 }
+
+// ====== Cek Unread Saat Login ======
+checkUnreadMessages();
