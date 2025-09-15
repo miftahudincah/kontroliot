@@ -21,34 +21,38 @@ notifBadge.style.display = 'none';
 chatPageBtn.appendChild(notifBadge);
 
 // ====== Audio Notifikasi (mirip WA) ======
-const notifSound = new Audio('https://assets.mixkit.co/sfx/download/mixkit-software-interface-back-2575.mp3');
+const notifSound = new Audio('https://www.myinstants.com/media/sounds/whatsapp-message-tone.mp3');
 
 // ====== Last Read Tracking ======
 function updateLastRead() {
   db.ref(`users/${currentUserKey}/lastRead`).set(Date.now());
 }
 
+async function getLastReadTime() {
+  const snap = await db.ref(`users/${currentUserKey}/lastRead`).once('value');
+  return snap.exists() ? snap.val() : 0;
+}
+
 async function checkUnreadMessages() {
-  const lastReadSnap = await db.ref(`users/${currentUserKey}/lastRead`).once('value');
-  let lastReadTime = lastReadSnap.exists() ? lastReadSnap.val() : 0;
+  const lastReadTime = await getLastReadTime();
+  let unread = 0;
 
   // cek global chat
-  db.ref('chat/global').once('value', snapshot => {
-    let unread = 0;
-    snapshot.forEach(msgSnap => {
-      const msg = msgSnap.val();
-      if (msg.userKey !== currentUserKey && msg.timestamp > lastReadTime) {
-        unread++;
-      }
-    });
-    if (unread > 0) {
-      notifSound.play();
-      notifCount += unread;
-      notifBadge.textContent = notifCount;
-      notifBadge.style.display = 'inline-block';
-      document.title = `💬 (${notifCount}) Pesan Belum Dibaca`;
+  const globalSnap = await db.ref('chat/global').once('value');
+  globalSnap.forEach(msgSnap => {
+    const msg = msgSnap.val();
+    if (msg.userKey !== currentUserKey && msg.timestamp > lastReadTime) {
+      unread++;
     }
   });
+
+  if (unread > 0) {
+    notifSound.play();
+    notifCount += unread;
+    notifBadge.textContent = notifCount;
+    notifBadge.style.display = 'inline-block';
+    document.title = `💬 (${notifCount}) Pesan Belum Dibaca`;
+  }
 }
 
 // ====== Tombol Hapus Semua Chat untuk Admin ======
@@ -151,14 +155,17 @@ sendChatBtn.addEventListener('click', () => {
 });
 
 // ====== Load Chat Realtime dengan Notifikasi ======
-function loadChats() {
+async function loadChats() {
   chatBox.innerHTML = '';
+  const lastReadTime = await getLastReadTime();
 
   if (chatMode === 'global') {
     db.ref('chat/global').off();
     db.ref('chat/global').on('child_added', snapshot => {
-      appendChat(snapshot.key, snapshot.val(), 'global');
-      if (chatPage.style.display === 'none' && snapshot.val().userKey !== currentUserKey) {
+      const msg = snapshot.val();
+      appendChat(snapshot.key, msg, 'global');
+
+      if (msg.userKey !== currentUserKey && msg.timestamp > lastReadTime) {
         notifSound.play();
         notifCount++;
         notifBadge.textContent = notifCount;
@@ -170,9 +177,10 @@ function loadChats() {
     const chatPath = [currentUserKey, privateUserKey].sort().join('_');
     db.ref('chat/private/' + chatPath).off();
     db.ref('chat/private/' + chatPath).on('child_added', snapshot => {
-      appendChat(snapshot.key, snapshot.val(), 'private');
-      const sender = snapshot.val().senderKey;
-      if (chatPage.style.display === 'none' && sender !== currentUserKey) {
+      const msg = snapshot.val();
+      appendChat(snapshot.key, msg, 'private');
+
+      if (msg.senderKey !== currentUserKey && msg.timestamp > lastReadTime) {
         notifSound.play();
         notifCount++;
         notifBadge.textContent = notifCount;
