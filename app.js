@@ -47,7 +47,7 @@ if (currentUserKey) {
 
       validateUserName(currentUserName, isValid => {
         if (isValid) showDashboard();
-        else promptNameInput(); // tampilkan input name jika nama tidak valid
+        else promptNameInput();
       });
     } else {
       localStorage.clear();
@@ -58,7 +58,7 @@ if (currentUserKey) {
   showLogin();
 }
 
-// ====== Fungsi Validasi Nama (case-insensitive) ======
+// ====== Fungsi Validasi Nama ======
 function validateUserName(name, callback) {
   const lowerName = name.toLowerCase();
   db.ref('validNames').orderByKey().once('value', snapshot => {
@@ -189,15 +189,18 @@ logoutBtn.addEventListener('click', () => {
 
 // ====== Inisialisasi Relay ======
 function initRelay() {
-  const relayRef = db.ref('relay/status');
-  const lockRef = db.ref('relay/lock');
-  const historyRef = db.ref('relay/history');
+  const relayRef = db.ref('relay');
 
-  relayRef.on('value', snap => updateRelayUI(snap.val() || 'off'));
-  lockRef.on('value', snap => updateLockUI(snap.val() || 'off'));
-  historyRef.on('value', snap => {
-    document.getElementById('status').textContent = `Status: ${snap.val() || '--'}`;
+  relayRef.on('value', snap => {
+    const data = snap.val() || {};
+    const status = data.status || 'off';
+    const lastUser = data.lastUser || '--';
+
+    updateRelayUI(status);
+    document.getElementById('status').textContent = `Status: ${status.toUpperCase()} oleh ${lastUser}`;
   });
+
+  db.ref('relay/lock').on('value', snap => updateLockUI(snap.val() || 'off'));
 }
 
 // ====== Update UI Relay & Lock ======
@@ -206,9 +209,7 @@ function updateRelayUI(status) {
 }
 
 function updateLockUI(lockStatus) {
-  lockIndicator.textContent = lockStatus === 'on' 
-    ? 'Lock: ON (Relay terkunci oleh Admin)' 
-    : 'Lock: OFF (Relay bisa digunakan)';
+  lockIndicator.textContent = lockStatus === 'on' ? 'Lock: ON' : 'Lock: OFF';
   lockIndicator.style.color = lockStatus === 'on' ? 'red' : 'green';
   if (currentUserRole !== 'admin') relayBtn.disabled = lockStatus === 'on';
   lockBtn.textContent = lockStatus === 'on' ? 'Unlock Relay' : 'Lock Relay';
@@ -226,23 +227,25 @@ relayBtn.addEventListener('click', () => {
 });
 
 function toggleRelayStatus(forceStatus = null) {
-  const relayRef = db.ref('relay/status');
-  const historyRef = db.ref('relay/history');
+  const relayRef = db.ref('relay');
 
   relayRef.once('value', snap => {
-    const newStatus = forceStatus ? forceStatus : (snap.val() || 'off') === 'on' ? 'off' : 'on';
-    relayRef.set(newStatus);
-    historyRef.set(`${currentUserName} menekan ${newStatus.toUpperCase()}`);
+    const current = snap.val() || {};
+    const newStatus = forceStatus ? forceStatus : (current.status || 'off') === 'on' ? 'off' : 'on';
+
+    relayRef.update({
+      status: newStatus,
+      lastUser: currentUserName
+    });
   });
 }
 
-// ====== Toggle Lock dengan Kunci ======
+// ====== Toggle Lock ======
 lockBtn.addEventListener('click', () => {
   if (currentUserRole !== 'admin') return;
 
   const lockRef = db.ref('relay/lock');
   const keyRef = db.ref('relay/lockKey');
-  const historyRef = db.ref('relay/history');
 
   lockRef.once('value', snap => {
     const lockStatus = snap.val() || 'off';
@@ -251,7 +254,6 @@ lockBtn.addEventListener('click', () => {
       if (!kunci) return alert("Lock dibatalkan karena kunci kosong!");
       lockRef.set('on');
       keyRef.set(kunci);
-      historyRef.set(`${currentUserName} mengunci relay dengan kunci`);
     } else {
       keyRef.once('value', snapKey => {
         const savedKey = snapKey.val();
@@ -259,7 +261,6 @@ lockBtn.addEventListener('click', () => {
         if (inputKey === savedKey) {
           lockRef.set('off');
           keyRef.remove();
-          historyRef.set(`${currentUserName} membuka kunci relay`);
         } else alert("Kunci salah! Tidak bisa Unlock.");
       });
     }
