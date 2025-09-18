@@ -58,15 +58,34 @@ if (currentUserKey) {
   showLogin();
 }
 
-// ====== Fungsi Validasi Nama ======
+// ====== Fungsi Validasi Nama (harus ada di validNames & unik) ======
 function validateUserName(name, callback) {
   const lowerName = name.toLowerCase();
+
+  // 1. Cek ada di validNames
   db.ref('validNames').orderByKey().once('value', snapshot => {
-    let exists = false;
+    let inValidNames = false;
     snapshot.forEach(child => {
-      if (child.key.toLowerCase() === lowerName) exists = true;
+      if (child.key.toLowerCase() === lowerName) inValidNames = true;
     });
-    callback(exists);
+
+    if (!inValidNames) {
+      callback(false); // Nama tidak ada di validNames
+      return;
+    }
+
+    // 2. Cek unik di users
+    db.ref('users').once('value', snapUsers => {
+      let exists = false;
+      snapUsers.forEach(child => {
+        const childName = child.val().name || '';
+        if (childName.toLowerCase() === lowerName && child.key !== currentUserKey) {
+          exists = true; // Nama sudah dipakai user lain
+        }
+      });
+
+      callback(!exists); // true = valid, false = bentrok
+    });
   });
 }
 
@@ -81,20 +100,27 @@ registerBtn.addEventListener('click', () => {
     return;
   }
 
-  db.ref('users').orderByChild('email').equalTo(email).once('value', snapshot => {
-    if (snapshot.exists()) {
-      alert('Email sudah terdaftar!');
-    } else {
-      const userId = db.ref('users').push().key;
-      db.ref('users/' + userId).set({
-        name,
-        email,
-        password,
-        role: 'user'
-      });
-      alert('Registrasi berhasil!');
-      togglePage();
+  validateUserName(name, isValid => {
+    if (!isValid) {
+      alert('Nama tidak valid atau sudah digunakan! Silakan ganti.');
+      return;
     }
+
+    db.ref('users').orderByChild('email').equalTo(email).once('value', snapshot => {
+      if (snapshot.exists()) {
+        alert('Email sudah terdaftar!');
+      } else {
+        const userId = db.ref('users').push().key;
+        db.ref('users/' + userId).set({
+          name,
+          email,
+          password,
+          role: 'user'
+        });
+        alert('Registrasi berhasil!');
+        togglePage();
+      }
+    });
   });
 });
 
@@ -135,7 +161,7 @@ loginBtn.addEventListener('click', () => {
 // ====== Prompt Input Nama ======
 function promptNameInput() {
   loginPage.innerHTML = `
-    <h3>Nama tidak valid! Masukkan nama Anda:</h3>
+    <h3>Nama tidak valid atau sudah digunakan! Masukkan nama lain:</h3>
     <input type="text" id="nameInput" placeholder="Nama Anda" />
     <button id="confirmNameBtn">Konfirmasi Nama</button>
   `;
@@ -154,7 +180,7 @@ function promptNameInput() {
         db.ref('users/' + currentUserKey).update({ name: nameInput });
         showDashboard();
       } else {
-        alert('Nama tidak valid atau tidak terdaftar!');
+        alert('Nama tidak valid atau sudah digunakan! Silakan ganti.');
       }
     });
   });
