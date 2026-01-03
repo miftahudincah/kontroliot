@@ -1,65 +1,299 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aplikasi Telah Diupdate</title>
-  <style>
-    body {
-      margin:0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: linear-gradient(135deg, #1e1e2f, #111827);
-      color:#f5f5f5;
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:20px;
-    }
-    .card {
-      background: rgba(255,255,255,0.05);
-      padding: 24px;
-      border-radius: 14px;
-      max-width: 500px;
-      width:100%;
-      text-align:center;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-    }
-    h1 {
-      font-size:20px;
-      margin-bottom:12px;
-    }
-    p {
-      font-size:14px;
-      color:#cbd5e1;
-      margin-bottom:20px;
-    }
-    .btn-download {
-      display:inline-block;
-      background: linear-gradient(90deg,#7c3aed,#5b21b6);
-      color:#fff;
-      padding:12px 20px;
-      border-radius:10px;
-      font-weight:bold;
-      text-decoration:none;
-      transition: transform .15s ease, box-shadow .15s ease;
-    }
-    .btn-download:hover {
-      transform:translateY(-2px);
-      box-shadow:0 6px 18px rgba(92,33,189,0.4);
-    }
-  </style>
+<meta charset="UTF-8">
+<title>ECU BZ840 Trainer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:#020617;
+  color:#e5e7eb;
+}
+h1{text-align:center;margin:10px}
+.section{
+  border:1px solid #334155;
+  border-radius:8px;
+  padding:10px;
+  margin:10px;
+}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.ind{
+  width:75px;
+  text-align:center;
+  padding:8px;
+  border-radius:6px;
+  background:#334155;
+  font-size:12px;
+}
+.on{background:#16a34a}
+.off{background:#334155}
+.err{background:#dc2626}
+.run{background:#22c55e}
+
+button{
+  padding:6px 10px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+}
+.offbtn{background:#dc2626;color:white}
+.onbtn{background:#16a34a;color:white}
+.startbtn{background:#2563eb;color:white}
+
+input[type=range]{width:100%}
+pre{
+  background:#020617;
+  border:1px solid #334155;
+  padding:8px;
+  font-size:12px;
+  height:110px;
+  overflow:auto;
+}
+</style>
 </head>
+
 <body>
-  <div class="card">
-    <h1>Aplikasi telah diupdate 🚀</h1>
-    <p>Segera unduh versi terbaru aplikasi IoT Anda melalui tombol di bawah ini:</p>
-    <a class="btn-download" 
-       href="https://www.mediafire.com/file/5cheyx93y27q41l/Iot+(2).apk/file" 
-       target="_blank" 
-       rel="noopener">
-       Download Aplikasi
-    </a>
-  </div>
+
+<h1>ECU BZ840 Trainer</h1>
+
+<!-- KONTAK -->
+<div class="section">
+<h3>Kunci Kontak</h3>
+<button class="offbtn" onclick="kontak('off')">OFF</button>
+<button class="onbtn" onclick="kontak('on')">ON</button>
+<button class="startbtn" onclick="kontak('start')">START</button>
+<p>Status: <b id="kontak">OFF</b></p>
+</div>
+
+<!-- RPM -->
+<div class="section">
+<h3>CKP / CMP (RPM)</h3>
+<input type="range" min="800" max="6000" value="800" id="rpm" oninput="setRPM()">
+<p>RPM: <b id="rpmVal">800</b></p>
+</div>
+
+<!-- SUHU -->
+<div class="section">
+<h3>WTS - Suhu Mesin</h3>
+<input type="range" min="0" max="120" value="40" id="temp" oninput="setTemp()">
+<p>Suhu: <b><span id="tempVal">40</span> °C</b></p>
+</div>
+
+<!-- COIL -->
+<div class="section">
+<h3>Coil</h3>
+<div class="row">
+<div class="ind off" id="c1">C1</div>
+<div class="ind off" id="c2">C2</div>
+<div class="ind off" id="c3">C3</div>
+<div class="ind off" id="c4">C4</div>
+</div>
+</div>
+
+<!-- INJECTOR -->
+<div class="section">
+<h3>Injector</h3>
+<div class="row">
+<div class="ind off" id="i1">I1</div>
+<div class="ind off" id="i2">I2</div>
+<div class="ind off" id="i3">I3</div>
+<div class="ind off" id="i4">I4</div>
+</div>
+</div>
+
+<!-- INDIKATOR -->
+<div class="section">
+<h3>Indikator</h3>
+<div class="row">
+<div class="ind off" id="mil">MIL</div>
+<div class="ind off" id="fuel">Fuel</div>
+<div class="ind off" id="fan">Fan</div>
+</div>
+</div>
+
+<!-- SENSOR -->
+<div class="section">
+<h3>Sensor (klik ON / OFF)</h3>
+<div class="row">
+<div class="ind on" onclick="toggleSensor('TPS')" id="TPS">TPS</div>
+<div class="ind on" onclick="toggleSensor('IAT')" id="IAT">IAT</div>
+<div class="ind on" onclick="toggleSensor('ISC')" id="ISC">ISC</div>
+<div class="ind on" onclick="toggleSensor('KNK')" id="KNK">KNK</div>
+<div class="ind on" onclick="toggleSensor('O2')" id="O2">O2</div>
+<div class="ind on" onclick="toggleSensor('VVT')" id="VVT">VVT</div>
+<div class="ind on" onclick="toggleSensor('WTS')" id="WTS">WTS</div>
+</div>
+</div>
+
+<!-- OBD2 -->
+<div class="section">
+<h3>OBD2 - DTC</h3>
+<pre id="dtcLog">No DTC</pre>
+</div>
+
+<script>
+let engine=false;
+let rpm=800;
+let temp=40;
+let timer=null;
+
+/* ===== SENSOR & DTC ===== */
+const sensorDTC={
+ TPS:"P0120 - TPS Circuit Malfunction",
+ IAT:"P0110 - IAT Circuit Malfunction",
+ ISC:"P0505 - Idle Control System",
+ KNK:"P0325 - Knock Sensor Malfunction",
+ O2:"P0130 - O2 Sensor Circuit",
+ VVT:"P1349 - VVT System Malfunction",
+ WTS:"P0115 - Engine Coolant Temp Circuit"
+};
+
+/* ===== FIRING ORDER ===== */
+const firing=[
+ {inj:1, coil:3},
+ {inj:3, coil:1},
+ {inj:4, coil:2},
+ {inj:2, coil:4}
+];
+
+const TRAINER_SCALE = 6;
+
+/* ===== KONTAK ===== */
+function kontak(m){
+ document.getElementById("kontak").innerText=m.toUpperCase();
+
+ if(m==="off"){
+  engine=false;
+  stopRun();
+  reset();
+ }
+
+ if(m==="on"){
+  fuelOn(2000);
+  milSelfCheck();   // 🔥 MIL ON saat kontak ON
+ }
+
+ if(m==="start"){
+  engine=true;
+  document.getElementById("fuel").className="ind on";
+  milAfterStart(); // 🔥 MIL OFF jika tidak ada DTC
+  startRun();
+ }
+}
+
+/* ===== MIL LOGIC ===== */
+function milSelfCheck(){
+ document.getElementById("mil").className="ind on";
+}
+
+function milAfterStart(){
+ if(!hasDTC()){
+  document.getElementById("mil").className="ind off";
+ }
+}
+
+/* ===== DTC CHECK ===== */
+function hasDTC(){
+ let err=false;
+ Object.keys(sensorDTC).forEach(s=>{
+  if(document.getElementById(s).classList.contains("err")) err=true;
+ });
+ return err;
+}
+
+/* ===== FUEL ===== */
+function fuelOn(ms){
+ document.getElementById("fuel").className="ind on";
+ setTimeout(()=>{
+  if(!engine) document.getElementById("fuel").className="ind off";
+ },ms);
+}
+
+/* ===== RPM ===== */
+function setRPM(){
+ rpm=document.getElementById("rpm").value;
+ document.getElementById("rpmVal").innerText=rpm;
+ if(engine) startRun();
+}
+
+/* ===== SUHU & FAN ===== */
+function setTemp(){
+ temp=document.getElementById("temp").value;
+ document.getElementById("tempVal").innerText=temp;
+ fanLogic();
+}
+
+function fanLogic(){
+ let wtsErr=document.getElementById("WTS").classList.contains("err");
+ if(temp>=80 || wtsErr){
+  document.getElementById("fan").className="ind on";
+ }else{
+  document.getElementById("fan").className="ind off";
+ }
+}
+
+/* ===== ENGINE RUN ===== */
+function startRun(){
+ stopRun();
+ let step=0;
+ let baseCycle = 60000 / (rpm / 2);
+ let delay = (baseCycle * TRAINER_SCALE) / firing.length;
+
+ timer=setInterval(()=>{
+  ["c1","c2","c3","c4","i1","i2","i3","i4"].forEach(id=>{
+   document.getElementById(id).className="ind off";
+  });
+
+  let f = firing[step];
+  document.getElementById("i"+f.inj).className="ind run";
+  document.getElementById("c"+f.coil).className="ind run";
+
+  step = (step+1)%firing.length;
+ },delay);
+}
+
+function stopRun(){ clearInterval(timer); }
+
+/* ===== SENSOR & DTC ===== */
+function toggleSensor(s){
+ let el=document.getElementById(s);
+ if(el.classList.contains("on")){
+  el.className="ind err";
+  addDTC(sensorDTC[s]);
+ }else{
+  el.className="ind on";
+  clearDTC();
+ }
+ fanLogic();
+}
+
+function addDTC(text){
+ document.getElementById("mil").className="ind err";
+ let log=document.getElementById("dtcLog");
+ if(!log.innerText.includes(text)){
+  log.innerText += "\n" + text;
+ }
+}
+
+function clearDTC(){
+ if(!hasDTC()){
+  document.getElementById("dtcLog").innerText="No DTC";
+  if(engine){
+   document.getElementById("mil").className="ind off";
+  }
+ }
+}
+
+/* ===== RESET ===== */
+function reset(){
+ document.querySelectorAll(".ind").forEach(e=>e.className="ind off");
+ document.getElementById("dtcLog").innerText="No DTC";
+ document.getElementById("temp").value=40;
+ document.getElementById("tempVal").innerText=40;
+}
+</script>
+
 </body>
-</html>
+  </html>
