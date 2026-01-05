@@ -2,298 +2,722 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>ECU BZ840 Trainer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECU BZ840 Trainer (Realistic)</title>
 <style>
-body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:#020617;
-  color:#e5e7eb;
-}
-h1{text-align:center;margin:10px}
-.section{
-  border:1px solid #334155;
-  border-radius:8px;
-  padding:10px;
-  margin:10px;
-}
-.row{display:flex;flex-wrap:wrap;gap:8px}
-.ind{
-  width:75px;
-  text-align:center;
-  padding:8px;
-  border-radius:6px;
-  background:#334155;
-  font-size:12px;
-}
-.on{background:#16a34a}
-.off{background:#334155}
-.err{background:#dc2626}
-.run{background:#22c55e}
-
-button{
-  padding:6px 10px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-.offbtn{background:#dc2626;color:white}
-.onbtn{background:#16a34a;color:white}
-.startbtn{background:#2563eb;color:white}
-
-input[type=range]{width:100%}
-pre{
-  background:#020617;
-  border:1px solid #334155;
-  padding:8px;
-  font-size:12px;
-  height:110px;
-  overflow:auto;
-}
+  :root{
+    --bg:#020617;
+    --panel:#071024;
+    --line:#334155;
+    --text:#e5e7eb;
+    --muted:#a7b0c2;
+    --accent:#38bdf8;
+    --ok:#16a34a;
+    --off:#334155;
+    --err:#dc2626;
+    --run:#22c55e;
+    --warn:#facc15;
+    --btnblue:#2563eb;
+  }
+  body{ margin:0; font-family:Arial, sans-serif; background:var(--bg); color:var(--text);}
+  h1{ text-align:center; margin:12px 10px; color:var(--accent); }
+  .wrap{ max-width:1050px; margin:0 auto; padding:0 8px 14px; }
+  .section{ border:1px solid var(--line); border-radius:10px; padding:12px; margin:10px 0; background:linear-gradient(180deg,#071024,#050b18); }
+  .row{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .col{ flex:1 1 260px; min-width:260px; }
+  .ind{
+    width:86px; text-align:center; padding:9px 8px; border-radius:8px;
+    background:var(--off); font-size:12px; user-select:none;
+    border:1px solid #22304a;
+  }
+  .tiny{ width:auto; padding:6px 10px; }
+  .on{ background:var(--ok); }
+  .off{ background:var(--off); }
+  .err{ background:var(--err); }
+  .run{ background:var(--run); }
+  .warn{ background:var(--warn); color:#111827; }
+  .pill{ display:inline-block; font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid #1f2a44; background:#0b1b37; color:#c7d2fe; }
+  button{
+    padding:8px 12px; border:none; border-radius:8px; cursor:pointer;
+    color:white; font-weight:700;
+  }
+  .offbtn{ background:#b91c1c; }
+  .onbtn{ background:#15803d; }
+  .startbtn{ background:var(--btnblue); }
+  .graybtn{ background:#475569; }
+  .warnbtn{ background:#f59e0b; color:#111827; }
+  input[type=range]{ width:100%; }
+  .kv{ color:var(--muted); font-size:13px; margin-top:6px; }
+  .kv b{ color:var(--text); }
+  pre{
+    background:#020617; border:1px solid var(--line); padding:10px; font-size:12px;
+    height:150px; overflow:auto; border-radius:10px;
+  }
+  .grid2{ display:grid; grid-template-columns:1fr; gap:10px; }
+  @media(min-width:900px){ .grid2{ grid-template-columns:1fr 1fr; } }
+  .hdr{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .small{ font-size:12px; color:var(--muted); margin-top:4px; }
+  .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 </style>
 </head>
 
 <body>
+<div class="wrap">
+<h1>ECU BZ840 Trainer (Realistic & SMK Friendly)</h1>
 
-<h1>ECU BZ840 Trainer</h1>
-
-<!-- KONTAK -->
+<!-- POWER / KEY -->
 <div class="section">
-<h3>Kunci Kontak</h3>
-<button class="offbtn" onclick="kontak('off')">OFF</button>
-<button class="onbtn" onclick="kontak('on')">ON</button>
-<button class="startbtn" onclick="kontak('start')">START</button>
-<p>Status: <b id="kontak">OFF</b></p>
+  <div class="hdr">
+    <div>
+      <h3 style="margin:0;color:var(--accent)">1) Power & Kunci Kontak (IGSW / STA)</h3>
+      <div class="small">Alur OEM: OFF → ON (MIL self-check + fuel prime) → START (STA) → RUN</div>
+    </div>
+    <div class="row">
+      <span class="pill">IGSW</span> <div class="ind tiny off" id="igswInd">OFF</div>
+      <span class="pill">STA</span>  <div class="ind tiny off" id="staInd">OFF</div>
+      <span class="pill">RUN</span>  <div class="ind tiny off" id="runInd">OFF</div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:10px">
+    <button class="offbtn" onclick="setKey('off')">OFF</button>
+    <button class="onbtn"  onclick="setKey('on')">ON (IGSW)</button>
+    <button class="startbtn" onclick="setKey('start')">START (STA)</button>
+    <button class="graybtn" onclick="setKey('crankoff')">Lepas START</button>
+  </div>
+
+  <div class="kv">
+    Status: <b id="keyState">OFF</b> ·
+    Fuel Prime: <b id="primeState">-</b> ·
+    Engine: <b id="engState">STOP</b>
+  </div>
 </div>
 
-<!-- RPM -->
+<!-- INPUTS -->
 <div class="section">
-<h3>CKP / CMP (RPM)</h3>
-<input type="range" min="800" max="6000" value="800" id="rpm" oninput="setRPM()">
-<p>RPM: <b id="rpmVal">800</b></p>
+  <h3 style="margin:0;color:var(--accent)">2) Input Mesin & Sensor (lebih mirip ECU)</h3>
+  <div class="grid2" style="margin-top:10px">
+
+    <div class="col section" style="margin:0;background:#050b18">
+      <h4 style="margin:0 0 8px">CKP / CMP (NE / G)</h4>
+
+      <div class="row">
+        <div class="ind on" id="CKP" onclick="toggleDigitalFault('CKP')">CKP OK</div>
+        <div class="ind on" id="CMP" onclick="toggleDigitalFault('CMP')">CMP OK</div>
+      </div>
+      <div class="small">Klik untuk simulasi fault: CKP/CMP missing → ECU tidak bisa RUN (realistis)</div>
+
+      <div style="margin-top:10px">
+        <label>RPM Target (untuk tampilan & training) </label>
+        <input type="range" min="700" max="6000" value="800" id="rpm" oninput="setRPM()">
+        <div class="kv">RPM: <b id="rpmVal">800</b></div>
+      </div>
+    </div>
+
+    <div class="col section" style="margin:0;background:#050b18">
+      <h4 style="margin:0 0 8px">ECT / WTS (THW) & Fan Logic</h4>
+
+      <div class="row">
+        <div class="ind on" id="WTS" onclick="cycleAnalogFault('WTS')">WTS NORMAL</div>
+        <div class="ind off" id="fan">FAN</div>
+      </div>
+      <div class="small">
+        WTS punya 3 mode: NORMAL → OPEN (putus) → SHORT (korslet). Fan ON jika ≥95°C atau WTS fault.
+      </div>
+
+      <div style="margin-top:10px">
+        <label>Suhu Mesin (°C)</label>
+        <input type="range" min="0" max="120" value="40" id="temp" oninput="setTemp()">
+        <div class="kv">Suhu: <b><span id="tempVal">40</span> °C</b></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="grid2" style="margin-top:10px">
+
+    <div class="col section" style="margin:0;background:#050b18">
+      <h4 style="margin:0 0 8px">Sensor Analog (TPS/MAP/IAT/O2/KNK/VVT)</h4>
+
+      <div class="row">
+        <div class="ind on" id="TPS" onclick="cycleAnalogFault('TPS')">TPS NORMAL</div>
+        <div class="ind on" id="MAP" onclick="cycleAnalogFault('MAP')">MAP NORMAL</div>
+        <div class="ind on" id="IAT" onclick="cycleAnalogFault('IAT')">IAT NORMAL</div>
+      </div>
+
+      <div class="row" style="margin-top:8px">
+        <div class="ind on" id="O2"  onclick="toggleSimpleFault('O2')">O2 OK</div>
+        <div class="ind on" id="KNK" onclick="toggleSimpleFault('KNK')">KNK OK</div>
+        <div class="ind on" id="VVT" onclick="toggleSimpleFault('VVT')">VVT OK</div>
+      </div>
+
+      <div class="small">
+        Analog dibuat 3-mode (NORMAL/OPEN/SHORT) untuk edukasi “tegangan naik/turun & DTC”.
+      </div>
+    </div>
+
+    <div class="col section" style="margin:0;background:#050b18">
+      <h4 style="margin:0 0 8px">Indikator ECU</h4>
+      <div class="row">
+        <div class="ind off" id="mil">MIL</div>
+        <div class="ind off" id="fuel">FUEL</div>
+        <div class="ind off" id="cel">CEL (Lamp)</div>
+      </div>
+      <div class="small">
+        MIL self-check saat IGSW ON. Setelah RUN: MIL OFF jika tidak ada DTC (Pending/Stored).
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button class="warnbtn" onclick="clearDTC()">Clear DTC (Mode 04)</button>
+        <button class="graybtn" onclick="resetAll()">Reset Trainer</button>
+      </div>
+
+      <div class="kv">
+        DTC Pending: <b id="pendingCnt">0</b> ·
+        DTC Stored: <b id="storedCnt">0</b>
+      </div>
+    </div>
+
+  </div>
 </div>
 
-<!-- SUHU -->
+<!-- OUTPUTS -->
 <div class="section">
-<h3>WTS - Suhu Mesin</h3>
-<input type="range" min="0" max="120" value="40" id="temp" oninput="setTemp()">
-<p>Suhu: <b><span id="tempVal">40</span> °C</b></p>
+  <h3 style="margin:0;color:var(--accent)">3) Output Injektor & Coil (Firing Order Realistik)</h3>
+  <div class="small">Firing order (Toyota/Daihatsu 4 silinder): <b>1-3-4-2</b>. Output hanya visual untuk LED/relay trainer.</div>
+
+  <div class="grid2" style="margin-top:10px">
+    <div class="col">
+      <h4 style="margin:0 0 8px">Coil (IGT)</h4>
+      <div class="row">
+        <div class="ind off" id="c1">C1</div>
+        <div class="ind off" id="c2">C2</div>
+        <div class="ind off" id="c3">C3</div>
+        <div class="ind off" id="c4">C4</div>
+      </div>
+    </div>
+    <div class="col">
+      <h4 style="margin:0 0 8px">Injector (INJ)</h4>
+      <div class="row">
+        <div class="ind off" id="i1">I1</div>
+        <div class="ind off" id="i2">I2</div>
+        <div class="ind off" id="i3">I3</div>
+        <div class="ind off" id="i4">I4</div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- COIL -->
+<!-- OBD / DTC -->
 <div class="section">
-<h3>Coil</h3>
-<div class="row">
-<div class="ind off" id="c1">C1</div>
-<div class="ind off" id="c2">C2</div>
-<div class="ind off" id="c3">C3</div>
-<div class="ind off" id="c4">C4</div>
-</div>
+  <h3 style="margin:0;color:var(--accent)">4) OBD2 / Diagnostik (Untuk Pembelajaran)</h3>
+  <div class="small">
+    Konsep: Fault muncul → <b>Pending</b>. Jika mesin RUN & fault tetap terjadi → jadi <b>Stored</b>. Clear DTC meniru Mode 04.
+  </div>
+
+  <div class="grid2" style="margin-top:10px">
+    <div class="col">
+      <h4 style="margin:0 0 8px">DTC Log</h4>
+      <pre id="dtcLog">No DTC</pre>
+    </div>
+    <div class="col">
+      <h4 style="margin:0 0 8px">Freeze Frame (Snapshot saat fault)</h4>
+      <pre id="ffLog">No Freeze Frame</pre>
+    </div>
+  </div>
 </div>
 
-<!-- INJECTOR -->
-<div class="section">
-<h3>Injector</h3>
-<div class="row">
-<div class="ind off" id="i1">I1</div>
-<div class="ind off" id="i2">I2</div>
-<div class="ind off" id="i3">I3</div>
-<div class="ind off" id="i4">I4</div>
-</div>
-</div>
-
-<!-- INDIKATOR -->
-<div class="section">
-<h3>Indikator</h3>
-<div class="row">
-<div class="ind off" id="mil">MIL</div>
-<div class="ind off" id="fuel">Fuel</div>
-<div class="ind off" id="fan">Fan</div>
-</div>
-</div>
-
-<!-- SENSOR -->
-<div class="section">
-<h3>Sensor (klik ON / OFF)</h3>
-<div class="row">
-<div class="ind on" onclick="toggleSensor('TPS')" id="TPS">TPS</div>
-<div class="ind on" onclick="toggleSensor('IAT')" id="IAT">IAT</div>
-<div class="ind on" onclick="toggleSensor('ISC')" id="ISC">ISC</div>
-<div class="ind on" onclick="toggleSensor('KNK')" id="KNK">KNK</div>
-<div class="ind on" onclick="toggleSensor('O2')" id="O2">O2</div>
-<div class="ind on" onclick="toggleSensor('VVT')" id="VVT">VVT</div>
-<div class="ind on" onclick="toggleSensor('WTS')" id="WTS">WTS</div>
-</div>
-</div>
-
-<!-- OBD2 -->
-<div class="section">
-<h3>OBD2 - DTC</h3>
-<pre id="dtcLog">No DTC</pre>
-</div>
+</div><!-- wrap -->
 
 <script>
-let engine=false;
+/* =========================
+   STATE
+========================= */
+let IGSW=false;
+let STA=false;
+let RUN=false;
+
 let rpm=800;
 let temp=40;
-let timer=null;
 
-/* ===== SENSOR & DTC ===== */
-const sensorDTC={
- TPS:"P0120 - TPS Circuit Malfunction",
- IAT:"P0110 - IAT Circuit Malfunction",
- ISC:"P0505 - Idle Control System",
- KNK:"P0325 - Knock Sensor Malfunction",
- O2:"P0130 - O2 Sensor Circuit",
- VVT:"P1349 - VVT System Malfunction",
- WTS:"P0115 - Engine Coolant Temp Circuit"
+let timer=null;
+let step=0;
+
+// pending & stored DTC maps
+const pending = new Map(); // code -> text
+const stored  = new Map(); // code -> text
+
+let freezeFrame = null; // snapshot object
+
+/* =========================
+   DTC DATABASE (BZ840-ish)
+========================= */
+const DTC = {
+  TPS:  { code:"P0120", text:"TPS (VTA) Circuit Malfunction" },
+  MAP:  { code:"P0106", text:"MAP (PIM) Range/Performance" },
+  WTS:  { code:"P0115", text:"ECT (THW) Circuit Malfunction" },
+  IAT:  { code:"P0110", text:"IAT (THA) Circuit Malfunction" },
+  O2:   { code:"P0130", text:"O2 (OX) Sensor Circuit" },
+  KNK:  { code:"P0325", text:"Knock (KNK) Sensor Circuit" },
+  VVT:  { code:"P1349", text:"VVT-i (OCV) System Malfunction" },
+  CKP:  { code:"P0335", text:"Crankshaft Position (NE) Circuit" },
+  CMP:  { code:"P0340", text:"Camshaft Position (G) Circuit" }
 };
 
-/* ===== FIRING ORDER ===== */
-const firing=[
- {inj:1, coil:3},
- {inj:3, coil:1},
- {inj:4, coil:2},
- {inj:2, coil:4}
+// sensor fault mode:
+// DIGITAL: OK / FAIL
+const digitalFault = { CKP:false, CMP:false };
+// ANALOG: 0 NORMAL, 1 OPEN, 2 SHORT
+const analogMode = { WTS:0, TPS:0, MAP:0, IAT:0 };
+// SIMPLE: OK / FAIL
+const simpleFault = { O2:false, KNK:false, VVT:false };
+
+/* =========================
+   FIRING ORDER (1-3-4-2)
+   Visual only (trainer)
+========================= */
+const firing = [
+  { inj:1, coil:1 },
+  { inj:3, coil:3 },
+  { inj:4, coil:4 },
+  { inj:2, coil:2 }
 ];
 
-const TRAINER_SCALE = 6;
+// Untuk tampilan supaya tidak terlalu cepat
+const TRAINER_SCALE = 7;
 
-/* ===== KONTAK ===== */
-function kontak(m){
- document.getElementById("kontak").innerText=m.toUpperCase();
+/* =========================
+   UI HELPERS
+========================= */
+function setInd(id, cls, txt=null){
+  const el=document.getElementById(id);
+  el.className = "ind " + cls;
+  if(txt!==null) el.innerText = txt;
+}
 
- if(m==="off"){
-  engine=false;
+function logDTC(){
+  const lines = [];
+
+  if(pending.size===0 && stored.size===0){
+    document.getElementById("dtcLog").innerText = "No DTC";
+  }else{
+    if(pending.size){
+      lines.push("== PENDING (Mode 07) ==");
+      pending.forEach((t,c)=> lines.push(`${c} - ${t}`));
+      lines.push("");
+    }
+    if(stored.size){
+      lines.push("== STORED (Mode 03) ==");
+      stored.forEach((t,c)=> lines.push(`${c} - ${t}`));
+    }
+    document.getElementById("dtcLog").innerText = lines.join("\n");
+  }
+
+  document.getElementById("pendingCnt").innerText = pending.size;
+  document.getElementById("storedCnt").innerText  = stored.size;
+
+  // MIL logic: MIL ON if any pending/stored AND IGSW true
+  if(IGSW && (pending.size || stored.size)) {
+    setInd("mil","err");
+    setInd("cel","err");
+  } else {
+    // self-check handled separately
+    if(RUN) { setInd("mil","off"); setInd("cel","off"); }
+  }
+}
+
+function captureFreezeFrame(reason){
+  if(freezeFrame) return; // keep first snapshot (simple)
+  freezeFrame = {
+    reason,
+    rpm,
+    temp,
+    IGSW, STA, RUN,
+    time: new Date().toLocaleString()
+  };
+  const ff = [
+    "== FREEZE FRAME (Mode 02 - sederhana) ==",
+    "Time : " + freezeFrame.time,
+    "Reason: " + freezeFrame.reason,
+    "IGSW : " + (IGSW?"ON":"OFF"),
+    "STA  : " + (STA?"ON":"OFF"),
+    "RUN  : " + (RUN?"ON":"OFF"),
+    "RPM  : " + freezeFrame.rpm,
+    "ECT  : " + freezeFrame.temp + " C"
+  ].join("\n");
+  document.getElementById("ffLog").innerText = ff;
+}
+
+/* =========================
+   KEY / POWER LOGIC (OEM-ish)
+========================= */
+function setKey(mode){
+  if(mode==="off"){
+    IGSW=false; STA=false; RUN=false;
+    setInd("igswInd","off","OFF");
+    setInd("staInd","off","OFF");
+    setInd("runInd","off","OFF");
+    document.getElementById("keyState").innerText="OFF";
+    document.getElementById("primeState").innerText="-";
+    document.getElementById("engState").innerText="STOP";
+
+    stopRun();
+    outputsOff();
+    // In ECU asli, stored DTC biasanya tetap tersimpan sampai clear / beberapa kondisi.
+    // Untuk trainer: tetap simpan stored, pending bisa tetap juga. Reset Trainer tombol terpisah.
+    // MIL mati karena IGSW OFF:
+    setInd("mil","off"); setInd("cel","off");
+    setInd("fuel","off"); setInd("fan","off");
+    return;
+  }
+
+  if(mode==="on"){
+    IGSW=true; STA=false; RUN=false;
+    setInd("igswInd","on","ON");
+    setInd("staInd","off","OFF");
+    setInd("runInd","off","OFF");
+    document.getElementById("keyState").innerText="ON (IGSW)";
+    document.getElementById("engState").innerText="STOP";
+
+    // MIL self-check (OEM) saat kontak ON
+    setInd("mil","on");
+    setInd("cel","on");
+
+    // fuel prime 2 detik (OEM)
+    fuelPrime(2000);
+
+    // setelah self-check 2 detik: MIL mengikuti DTC (kalau ada) atau OFF
+    setTimeout(()=>{
+      if(!IGSW || RUN) return;
+      if(pending.size || stored.size){
+        setInd("mil","err");
+        setInd("cel","err");
+      }else{
+        setInd("mil","off");
+        setInd("cel","off");
+      }
+    },2000);
+
+    logDTC();
+    fanLogic();
+    return;
+  }
+
+  if(mode==="start"){
+    if(!IGSW){
+      // di OEM, starter biasanya tidak mungkin tanpa IGSW
+      return;
+    }
+    STA=true;
+    setInd("staInd","on","ON");
+    document.getElementById("keyState").innerText="START (STA)";
+    document.getElementById("primeState").innerText="—";
+    // saat start, fuel ON
+    setInd("fuel","on");
+
+    // syarat ECU bisa RUN: CKP & CMP harus OK (realistis)
+    if(digitalFault.CKP){
+      addPending("CKP", "CKP missing saat START");
+      captureFreezeFrame("CKP missing");
+      cannotRun("CKP missing → mesin tidak bisa RUN");
+      return;
+    }
+    if(digitalFault.CMP){
+      addPending("CMP", "CMP missing saat START");
+      captureFreezeFrame("CMP missing");
+      cannotRun("CMP missing → mesin sulit RUN (trainer: diblok)");
+      return;
+    }
+
+    RUN=true;
+    setInd("runInd","run","ON");
+    document.getElementById("engState").innerText="RUN";
+
+    // MIL setelah RUN: OFF jika tidak ada DTC, ON jika ada
+    if(pending.size || stored.size){
+      setInd("mil","err"); setInd("cel","err");
+    }else{
+      setInd("mil","off"); setInd("cel","off");
+    }
+
+    // start engine outputs
+    startRun();
+    fanLogic();
+    // saat RUN, kalau fault tetap ada, pending → stored (simulasi sederhana)
+    promotePendingToStoredIfRunning();
+    return;
+  }
+
+  if(mode==="crankoff"){
+    STA=false;
+    setInd("staInd","off","OFF");
+    if(RUN){
+      document.getElementById("keyState").innerText="ON (RUN)";
+    }else{
+      document.getElementById("keyState").innerText="ON (IGSW)";
+    }
+    // fuel tetap ON kalau RUN, kalau tidak RUN fuel OFF setelah prime (di sini langsung off)
+    if(!RUN) setInd("fuel","off");
+    return;
+  }
+}
+
+function cannotRun(msg){
+  RUN=false;
+  setInd("runInd","off","OFF");
+  document.getElementById("engState").innerText="STOP";
   stopRun();
-  reset();
- }
-
- if(m==="on"){
-  fuelOn(2000);
-  milSelfCheck();   // 🔥 MIL ON saat kontak ON
- }
-
- if(m==="start"){
-  engine=true;
-  document.getElementById("fuel").className="ind on";
-  milAfterStart(); // 🔥 MIL OFF jika tidak ada DTC
-  startRun();
- }
+  outputsOff();
+  // MIL on karena ada pending
+  setInd("mil","err"); setInd("cel","err");
+  // fuel off (seolah ECU memutus)
+  setInd("fuel","off");
+  // tulis info ke freeze frame area jika belum ada
+  if(!freezeFrame){
+    document.getElementById("ffLog").innerText = "Tidak bisa RUN:\n" + msg;
+  }
+  logDTC();
 }
 
-/* ===== MIL LOGIC ===== */
-function milSelfCheck(){
- document.getElementById("mil").className="ind on";
+function fuelPrime(ms){
+  document.getElementById("primeState").innerText = ms + " ms";
+  setInd("fuel","on");
+  setTimeout(()=>{
+    document.getElementById("primeState").innerText = "done";
+    if(!RUN && !STA) setInd("fuel","off"); // bila tidak start, fuel mati setelah prime
+  }, ms);
 }
 
-function milAfterStart(){
- if(!hasDTC()){
-  document.getElementById("mil").className="ind off";
- }
+/* =========================
+   OUTPUT (INJ/COIL) VISUAL
+========================= */
+function outputsOff(){
+  ["c1","c2","c3","c4","i1","i2","i3","i4"].forEach(id=> setInd(id,"off"));
 }
 
-/* ===== DTC CHECK ===== */
-function hasDTC(){
- let err=false;
- Object.keys(sensorDTC).forEach(s=>{
-  if(document.getElementById(s).classList.contains("err")) err=true;
- });
- return err;
+function startRun(){
+  stopRun();
+  step=0;
+
+  // Perhitungan sederhana: 4-step firing per 2 rev (4 silinder). Ini hanya visual.
+  const baseCycleMs = 60000 / (rpm / 2);          // ms per 2 rev
+  const interval = Math.max(30, (baseCycleMs * TRAINER_SCALE) / firing.length);
+
+  timer = setInterval(()=>{
+    if(!RUN){ stopRun(); outputsOff(); return; }
+
+    outputsOff();
+    const f = firing[step];
+    setInd("i"+f.inj, "run");
+    setInd("c"+f.coil,"run");
+
+    step = (step+1) % firing.length;
+
+    // Saat RUN, cek fault terus
+    updateFaultLogicDuringRun();
+
+  }, interval);
 }
 
-/* ===== FUEL ===== */
-function fuelOn(ms){
- document.getElementById("fuel").className="ind on";
- setTimeout(()=>{
-  if(!engine) document.getElementById("fuel").className="ind off";
- },ms);
+function stopRun(){
+  if(timer) clearInterval(timer);
+  timer=null;
 }
 
-/* ===== RPM ===== */
+/* =========================
+   RPM / TEMP
+========================= */
 function setRPM(){
- rpm=document.getElementById("rpm").value;
- document.getElementById("rpmVal").innerText=rpm;
- if(engine) startRun();
+  rpm = Number(document.getElementById("rpm").value);
+  document.getElementById("rpmVal").innerText = rpm;
+  if(RUN) startRun(); // recalculates interval
 }
 
-/* ===== SUHU & FAN ===== */
 function setTemp(){
- temp=document.getElementById("temp").value;
- document.getElementById("tempVal").innerText=temp;
- fanLogic();
+  temp = Number(document.getElementById("temp").value);
+  document.getElementById("tempVal").innerText = temp;
+  fanLogic();
+  updateFaultLogicDuringRun();
 }
 
 function fanLogic(){
- let wtsErr=document.getElementById("WTS").classList.contains("err");
- if(temp>=80 || wtsErr){
-  document.getElementById("fan").className="ind on";
- }else{
-  document.getElementById("fan").className="ind off";
- }
+  const wtsFault = analogMode.WTS !== 0; // OPEN/SHORT
+  if(temp >= 95 || wtsFault){
+    setInd("fan","on");
+  } else {
+    setInd("fan","off");
+  }
 }
 
-/* ===== ENGINE RUN ===== */
-function startRun(){
- stopRun();
- let step=0;
- let baseCycle = 60000 / (rpm / 2);
- let delay = (baseCycle * TRAINER_SCALE) / firing.length;
+/* =========================
+   SENSOR FAULT TOGGLE
+========================= */
+function toggleDigitalFault(s){
+  digitalFault[s] = !digitalFault[s];
+  const el = document.getElementById(s);
+  if(digitalFault[s]){
+    el.className = "ind err";
+    el.innerText = s + " FAIL";
+    addPending(s, s+" missing");
+    captureFreezeFrame(s+" missing");
+  } else {
+    el.className = "ind on";
+    el.innerText = s + " OK";
+    // pending tidak otomatis hilang di ECU asli; jadi kita biarkan sampai clear atau kondisi.
+    // Untuk trainer: tetap pending/stored sampai Clear DTC.
+  }
+  logDTC();
+}
 
- timer=setInterval(()=>{
-  ["c1","c2","c3","c4","i1","i2","i3","i4"].forEach(id=>{
-   document.getElementById(id).className="ind off";
+function cycleAnalogFault(s){
+  analogMode[s] = (analogMode[s] + 1) % 3; // 0 normal,1 open,2 short
+  const el = document.getElementById(s);
+
+  if(analogMode[s]===0){
+    el.className="ind on";
+    el.innerText = s + " NORMAL";
+  } else if(analogMode[s]===1){
+    el.className="ind err";
+    el.innerText = s + " OPEN";
+    addPending(s, s+" open circuit");
+    captureFreezeFrame(s+" OPEN");
+  } else {
+    el.className="ind err";
+    el.innerText = s + " SHORT";
+    addPending(s, s+" short circuit");
+    captureFreezeFrame(s+" SHORT");
+  }
+  logDTC();
+  fanLogic();
+}
+
+function toggleSimpleFault(s){
+  simpleFault[s] = !simpleFault[s];
+  const el = document.getElementById(s);
+  if(simpleFault[s]){
+    el.className="ind err";
+    el.innerText = s + " FAIL";
+    addPending(s, s+" fault");
+    captureFreezeFrame(s+" fault");
+  } else {
+    el.className="ind on";
+    el.innerText = s + " OK";
+  }
+  logDTC();
+}
+
+/* =========================
+   DTC LOGIC (PENDING/STORED)
+========================= */
+function addPending(sensorKey, reason){
+  const d = DTC[sensorKey];
+  if(!d) return;
+  pending.set(d.code, d.text + (reason?(" ("+reason+")"):""));
+}
+
+function promotePendingToStoredIfRunning(){
+  if(!RUN) return;
+  // Simulasi sederhana: begitu RUN dan ada pending, pindahkan jadi stored
+  pending.forEach((t,c)=> stored.set(c,t));
+  logDTC();
+}
+
+function updateFaultLogicDuringRun(){
+  // CKP/CMP fail saat RUN → engine stall (realistis)
+  if(RUN && digitalFault.CKP){
+    addPending("CKP", "lost while running");
+    stored.set(DTC.CKP.code, DTC.CKP.text + " (lost while running)");
+    captureFreezeFrame("CKP lost while running");
+    cannotRun("CKP hilang saat RUN → mesin mati (stall)");
+    return;
+  }
+
+  // Jika WTS fault, fan ON sudah ditangani
+  if(RUN && analogMode.WTS !== 0){
+    stored.set(DTC.WTS.code, DTC.WTS.text);
+  }
+
+  // Promote pending to stored periodically while running (realistic-ish)
+  if(RUN){
+    promotePendingToStoredIfRunning();
+  }
+}
+
+/* =========================
+   CLEAR / RESET
+========================= */
+function clearDTC(){
+  pending.clear();
+  stored.clear();
+  freezeFrame=null;
+  document.getElementById("ffLog").innerText="No Freeze Frame";
+
+  // MIL update
+  if(IGSW){
+    // setelah clear, ECU biasanya MIL off jika tidak ada fault aktif
+    if(RUN){
+      setInd("mil","off"); setInd("cel","off");
+    }else{
+      // kalau belum RUN, self-check berikutnya saat ON
+      setInd("mil","off"); setInd("cel","off");
+    }
+  } else {
+    setInd("mil","off"); setInd("cel","off");
+  }
+  logDTC();
+}
+
+function resetAll(){
+  // full reset trainer (seperti power cycle + clear)
+  IGSW=false; STA=false; RUN=false;
+  rpm=800; temp=40;
+  document.getElementById("rpm").value=800;
+  document.getElementById("rpmVal").innerText=800;
+  document.getElementById("temp").value=40;
+  document.getElementById("tempVal").innerText=40;
+
+  // reset sensor states
+  digitalFault.CKP=false; digitalFault.CMP=false;
+  analogMode.WTS=0; analogMode.TPS=0; analogMode.MAP=0; analogMode.IAT=0;
+  simpleFault.O2=false; simpleFault.KNK=false; simpleFault.VVT=false;
+
+  // restore UI sensor badges
+  document.getElementById("CKP").className="ind on"; document.getElementById("CKP").innerText="CKP OK";
+  document.getElementById("CMP").className="ind on"; document.getElementById("CMP").innerText="CMP OK";
+
+  ["WTS","TPS","MAP","IAT"].forEach(s=>{
+    document.getElementById(s).className="ind on";
+    document.getElementById(s).innerText = s + " NORMAL";
+  });
+  ["O2","KNK","VVT"].forEach(s=>{
+    document.getElementById(s).className="ind on";
+    document.getElementById(s).innerText = s + " OK";
   });
 
-  let f = firing[step];
-  document.getElementById("i"+f.inj).className="ind run";
-  document.getElementById("c"+f.coil).className="ind run";
-
-  step = (step+1)%firing.length;
- },delay);
-}
-
-function stopRun(){ clearInterval(timer); }
-
-/* ===== SENSOR & DTC ===== */
-function toggleSensor(s){
- let el=document.getElementById(s);
- if(el.classList.contains("on")){
-  el.className="ind err";
-  addDTC(sensorDTC[s]);
- }else{
-  el.className="ind on";
-  clearDTC();
- }
- fanLogic();
-}
-
-function addDTC(text){
- document.getElementById("mil").className="ind err";
- let log=document.getElementById("dtcLog");
- if(!log.innerText.includes(text)){
-  log.innerText += "\n" + text;
- }
-}
-
-function clearDTC(){
- if(!hasDTC()){
+  pending.clear(); stored.clear(); freezeFrame=null;
   document.getElementById("dtcLog").innerText="No DTC";
-  if(engine){
-   document.getElementById("mil").className="ind off";
-  }
- }
+  document.getElementById("ffLog").innerText="No Freeze Frame";
+  document.getElementById("pendingCnt").innerText="0";
+  document.getElementById("storedCnt").innerText="0";
+
+  // outputs & indicators
+  stopRun();
+  outputsOff();
+  setInd("mil","off"); setInd("cel","off");
+  setInd("fuel","off"); setInd("fan","off");
+
+  // key indicators
+  setInd("igswInd","off","OFF");
+  setInd("staInd","off","OFF");
+  setInd("runInd","off","OFF");
+
+  document.getElementById("keyState").innerText="OFF";
+  document.getElementById("primeState").innerText="-";
+  document.getElementById("engState").innerText="STOP";
 }
 
-/* ===== RESET ===== */
-function reset(){
- document.querySelectorAll(".ind").forEach(e=>e.className="ind off");
- document.getElementById("dtcLog").innerText="No DTC";
- document.getElementById("temp").value=40;
- document.getElementById("tempVal").innerText=40;
-}
+/* init */
+resetAll();
 </script>
-
 </body>
-  </html>
+</html>
